@@ -26,8 +26,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Supabase Admin Client ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://wlwlbzrfazwtvsboljzp.supabase.co";
-const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://wlwlbzrfazwtvsboljzp.supabase.co";
+const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 const admin = createClient(supabaseUrl, supabaseKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -250,8 +250,34 @@ SAFETY GUARDRAILS:
 }
 
 // --- Data Stores ---
-const DATA_DIR = path.resolve(__dirname, "../data");
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const ORIGINAL_DATA_DIR = path.resolve(__dirname, "../data");
+const DATA_DIR = process.env.VERCEL ? path.join("/tmp", "vaani_data") : ORIGINAL_DATA_DIR;
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+if (process.env.VERCEL && fs.existsSync(ORIGINAL_DATA_DIR)) {
+  const seedFiles = [
+    "community_posts.json",
+    "community_comments.json",
+    "consultations.json",
+    "prescriptions.json",
+    "notifications.json",
+    "messages.json",
+  ];
+  for (const file of seedFiles) {
+    const dest = path.join(DATA_DIR, file);
+    const src = path.join(ORIGINAL_DATA_DIR, file);
+    if (!fs.existsSync(dest) && fs.existsSync(src)) {
+      try {
+        fs.copyFileSync(src, dest);
+      } catch {
+        // ignore copy failures on read-only environments
+      }
+    }
+  }
+}
+
 const POSTS_FILE = path.join(DATA_DIR, "community_posts.json");
 const COMMENTS_FILE = path.join(DATA_DIR, "community_comments.json");
 const CONSULTATIONS_FILE = path.join(DATA_DIR, "consultations.json");
@@ -1754,6 +1780,10 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`VaaniVisit Backend API Server running on port ${PORT}`);
-});
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(`VaaniVisit Backend API Server running on port ${PORT}`);
+  });
+}
+
+export default app;

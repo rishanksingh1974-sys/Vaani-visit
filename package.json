@@ -2,6 +2,9 @@
   "name": "vani-visit-workspace",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "vaanivisit"
+  ],
   "scripts": {
     "server": "npm --prefix vaanivisit run server",
     "dev": "npm --prefix vaanivisit run dev",
